@@ -1,0 +1,63 @@
+<!doctype html>
+<!-- 23 nov 2026 ("quítala"): página propia de PokeTracker. Muestra la app por dentro para que Google no ponga su franja
+     "This application was created by a Google Apps Script user".
+     El link del motor NO está escrito aquí (esta página vive en un repo público): viaja en el enlace, después del #
+     (.../poketracker-pagina/#AKfycb...), y la página lo recuerda. Lo que va después del # nunca llega a GitHub. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PokeTracker</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1b1c21">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PokeTracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="icono.png">
+<link rel="icon" href="icono.png">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #1b1c21; overflow: hidden; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; visibility: hidden;
+           padding-top: env(safe-area-inset-top); box-sizing: border-box; background: #1b1c21; }
+  iframe.lista { visibility: visible; }
+  main { color: #e8e8ec; font: 16px/1.5 system-ui, -apple-system, sans-serif; text-align: center;
+         padding: 40vh 24px 0; text-wrap: balance; }
+  main p { margin: 0 0 8px; }
+  main small { color: #a4a6ae; font-size: 14px; }
+  main button { margin-top: 16px; font: inherit; color: #1b1c21; background: #e8e8ec; border: 0;
+                border-radius: 8px; padding: 10px 22px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main role="status" id="aviso"><p>Cargando PokeTracker…</p></main>
+<script>
+(function () {
+  var CLAVE = 'pt-motor', id = (location.hash || '').slice(1), aviso = document.getElementById('aviso');
+  var bueno = function (x) { return /^AKfycb[\w-]{20,}$/.test(x || ''); };
+  var decir = function (texto, pista, boton) {
+    aviso.innerHTML = '';
+    var p = document.createElement('p'); p.textContent = texto; aviso.appendChild(p);
+    if (pista) { var s = document.createElement('small'); s.textContent = pista; aviso.appendChild(s); }
+    if (boton) { var b = document.createElement('button'); b.textContent = 'Reintentar'; b.onclick = function () { location.reload(); }; aviso.appendChild(document.createElement('br')); aviso.appendChild(b); }
+  };
+  try { if (bueno(id)) localStorage.setItem(CLAVE, id); else id = localStorage.getItem(CLAVE); } catch (e) {}
+  if (!bueno(id)) {
+    decir('Abre PokeTracker con el enlace completo que te enviaron.',
+          'Después, en Safari: Compartir → Agregar a pantalla de inicio.');
+    return;
+  }
+  var f = document.createElement('iframe');
+  f.title = 'PokeTracker';
+  f.allow = 'clipboard-write';
+  // Si en 20 s no carga nada (sin internet o Google caído), se dice y se ofrece reintentar.
+  var espera = setTimeout(function () { decir('No se pudo abrir PokeTracker.', 'Revisa tu conexión a internet.', true); }, 20000);
+  f.onload = function () { clearTimeout(espera); f.className = 'lista'; };
+  f.src = 'https://script.google.com/macros/s/' + id + '/exec?app=1';
+  document.body.appendChild(f);
+})();
+</script>
+</body>
+</html>
