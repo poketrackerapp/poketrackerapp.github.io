@@ -49,6 +49,18 @@
           'Después, en Safari: Compartir → Agregar a pantalla de inicio.');
     return;
   }
+  // 23 nov 2026 ("no se queda guardado el usuario en mi celu"): el iPhone borra lo que guarda el cuadro de Google al
+  // cerrar la app. La app le pasa aquí su sesión (guardar / olvidar) y al abrir la pide. Solo se atiende a Google.
+  var SES = 'pt-sesion';
+  window.addEventListener('message', function (ev) {
+    var d = ev.data;
+    if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(ev.origin) || !d || typeof d.ptPagina !== 'string' || !ev.source) return;
+    try {
+      if (d.ptPagina === 'guardar' && d.ses && typeof d.ses.token === 'string') localStorage.setItem(SES, JSON.stringify(d.ses));
+      else if (d.ptPagina === 'olvidar') localStorage.removeItem(SES);
+      else if (d.ptPagina === 'pedir') ev.source.postMessage({ ptPagina: 'sesion', ses: JSON.parse(localStorage.getItem(SES) || 'null') }, ev.origin);
+    } catch (e) { /* sin memoria: la app pide entrar */ }
+  });
   var f = document.createElement('iframe');
   f.title = 'PokeTracker';
   f.allow = 'clipboard-write';
