@@ -49,12 +49,29 @@
           'Después, en Safari: Compartir → Agregar a pantalla de inicio.');
     return;
   }
+  // Revisión 23 nov: solo abre NUESTRO motor (un link con otro motor podría pedir la sesión guardada). Se compara su
+  // huella SHA-256, así el link del motor sigue sin estar escrito aquí. Si se cambia de motor: actualizar MOTOR.
+  var MOTOR = 'a9962522a857fa986a799889364febfaf6f048d55fc24e189e930ceb49a8e7ab';
+  if (!(window.crypto && crypto.subtle && window.TextEncoder)) return decir('Este navegador no puede abrir PokeTracker.', 'Usa Safari o Chrome actualizados.');
+  crypto.subtle.digest('SHA-256', new TextEncoder().encode(id)).then(function (h) {
+    var hex = Array.prototype.map.call(new Uint8Array(h), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    if (hex !== MOTOR) {
+      try { localStorage.removeItem(CLAVE); } catch (e) {}
+      return decir('Este enlace no es de PokeTracker.', 'Ábrelo con el enlace completo que te enviaron.');
+    }
+    abrir();
+  });
+  function abrir() {
   // 23 nov 2026 ("no se queda guardado el usuario en mi celu"): el iPhone borra lo que guarda el cuadro de Google al
   // cerrar la app. La app le pasa aquí su sesión (guardar / olvidar) y al abrir la pide. Solo se atiende a Google.
   var SES = 'pt-sesion';
   window.addEventListener('message', function (ev) {
     var d = ev.data;
     if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(ev.origin) || !d || typeof d.ptPagina !== 'string' || !ev.source) return;
+    // Solo la app que va dentro de NUESTRO cuadro (otra página de Google no puede pedir ni borrar la sesión).
+    var w = ev.source, nuestra = false;
+    try { for (var i = 0; i < 5 && w; i++) { if (f && w === f.contentWindow) { nuestra = true; break; } if (w === w.parent) break; w = w.parent; } } catch (e) { }
+    if (!nuestra || window.top !== window) return;
     try {
       if (d.ptPagina === 'guardar' && d.ses && typeof d.ses.token === 'string') localStorage.setItem(SES, JSON.stringify(d.ses));
       else if (d.ptPagina === 'olvidar') localStorage.removeItem(SES);
@@ -69,6 +86,7 @@
   f.onload = function () { clearTimeout(espera); f.className = 'lista'; };
   f.src = 'https://script.google.com/macros/s/' + id + '/exec?app=1';
   document.body.appendChild(f);
+  }
 })();
 </script>
 </body>
