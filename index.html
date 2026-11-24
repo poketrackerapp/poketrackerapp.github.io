@@ -64,7 +64,9 @@
   function abrir() {
   // 23 nov 2026 ("no se queda guardado el usuario en mi celu"): el iPhone borra lo que guarda el cuadro de Google al
   // cerrar la app. La app le pasa aquí su sesión (guardar / olvidar) y al abrir la pide. Solo se atiende a Google.
-  var SES = 'pt-sesion';
+  // 23 nov ("apertura al instante"): también guarda UNA copia de lo último que vio (pt-datos, se reemplaza, nunca se
+  // acumula) para pintarla al abrir mientras se trae lo nuevo. Se borra al cerrar sesión.
+  var SES = 'pt-sesion', DATOS = 'pt-datos';
   window.addEventListener('message', function (ev) {
     var d = ev.data;
     if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(ev.origin) || !d || typeof d.ptPagina !== 'string' || !ev.source) return;
@@ -73,9 +75,17 @@
     try { for (var i = 0; i < 5 && w; i++) { if (f && w === f.contentWindow) { nuestra = true; break; } if (w === w.parent) break; w = w.parent; } } catch (e) { }
     if (!nuestra || window.top !== window) return;
     try {
-      if (d.ptPagina === 'guardar' && d.ses && typeof d.ses.token === 'string') localStorage.setItem(SES, JSON.stringify(d.ses));
-      else if (d.ptPagina === 'olvidar') localStorage.removeItem(SES);
-      else if (d.ptPagina === 'pedir') ev.source.postMessage({ ptPagina: 'sesion', ses: JSON.parse(localStorage.getItem(SES) || 'null') }, ev.origin);
+      if (d.ptPagina === 'guardar' && d.ses && typeof d.ses.token === 'string') {
+        localStorage.setItem(SES, JSON.stringify(d.ses));
+        var dt = localStorage.getItem(DATOS);   // la copia de OTRA cuenta no se queda
+        if (dt && dt.indexOf('{"v":1,"u":' + JSON.stringify(d.ses.usuario) + ',') !== 0) localStorage.removeItem(DATOS);
+      }
+      else if (d.ptPagina === 'guardarDatos' && typeof d.datos === 'string') {
+        try { localStorage.setItem(DATOS, d.datos); } catch (e) { localStorage.removeItem(DATOS); return; }   // sin espacio: sin copia
+        ev.source.postMessage({ ptPagina: 'datosGuardados', n: d.n }, ev.origin);   // 24 nov: la app da la copia por guardada solo con esto
+      }
+      else if (d.ptPagina === 'olvidar') { localStorage.removeItem(SES); localStorage.removeItem(DATOS); }
+      else if (d.ptPagina === 'pedir') ev.source.postMessage({ ptPagina: 'sesion', ses: JSON.parse(localStorage.getItem(SES) || 'null'), datos: localStorage.getItem(DATOS) }, ev.origin);
     } catch (e) { /* sin memoria: la app pide entrar */ }
   });
   var f = document.createElement('iframe');
